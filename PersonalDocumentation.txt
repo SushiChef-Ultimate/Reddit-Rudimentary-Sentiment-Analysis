@@ -1,0 +1,8 @@
+Commit 1:
+    Connected to reddit API. We will be pulling from the economy subreddit
+
+Commit 2:
+    Figured out how to scrape data from reddit, put it into a list, transform it into something a databse can use, and exported it.
+    The code now generates a table if it doesn't exist (only really runs the first time), and populates the table with data.
+    We will be using Neon as our serverless database, since its free tier is accesible for someone in my position, and automatic scaling
+    takes some responsibility from me.
