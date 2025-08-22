@@ -10,151 +10,149 @@ from sqlalchemy import MetaData, Table, Column, String, Integer, DateTime
 from sqlalchemy.dialects.postgresql import insert
 
 # We first load .env info into variables
-while True: # Designed to populate database with 50 entries per minute
-    load_dotenv()
+# We will be hosting this file on google cloud I can run this repeatedly & automatically without using local compute. No need for 60 sec loop.
+load_dotenv()
 
-    client_id = os.getenv("CLIENT_ID")
-    client_secret = os.getenv("CLIENT_SECRET")
-    user_agent = os.getenv("USER_AGENT")
+client_id = os.getenv("CLIENT_ID")
+client_secret = os.getenv("CLIENT_SECRET")
+user_agent = os.getenv("USER_AGENT")
 
-    reddit = praw.Reddit( # connect to reddit API using .env variables
-        client_id=client_id,
-        client_secret=client_secret,
-        user_agent=user_agent
+reddit = praw.Reddit( # connect to reddit API using .env variables
+    client_id=client_id,
+    client_secret=client_secret,
+    user_agent=user_agent
+)
+
+subreddit = reddit.subreddit("economics") # set our subreddit to "economics"
+posts = [] # List of posts
+for post in subreddit.hot(limit=50):
+    posts.append({
+        "id": post.id,
+        "title": post.title,
+        "author": str(post.author),
+        "score": post.score,
+        "num_comments": post.num_comments,
+        "created_at": post.created_utc,
+        "url": post.url
+    })
+
+PandaDataframe = pd.DataFrame(posts) # Using pandas, we convert posts list to tabular data format
+
+# Next we need to clean up our data a little before export
+PandaDataframe["author"] = PandaDataframe["author"].apply(lambda a: None if a == "None" else a) # Changes posts with no author to NULL
+PandaDataframe["created_at"] = pd.to_datetime(PandaDataframe["created_at"], unit='s', utc=True) # Converts reddit timestamp to more usable datetime
+
+NEON_DB_CONNECTION = os.getenv("NEON_DB_CONNECTION")
+engine = create_engine(NEON_DB_CONNECTION, pool_pre_ping=True)
+
+# Creation of table, if it doesnt exist
+create_sql = """
+CREATE TABLE IF NOT EXISTS reddit_posts (
+    id TEXT PRIMARY KEY,
+    title TEXT,
+    author TEXT,
+    score INTEGER,
+    num_comments INTEGER,
+    created_at TIMESTAMPTZ,
+    url TEXT
+);
+"""
+
+# Applies created table if table doesn't exist, makes no changes if table does already exist
+with engine.begin() as x:
+    x.execute(text(create_sql))
+
+# Define metadata for PostgreSQL table, since table schema isnt remembered between each SQL execution
+metadata = MetaData()
+reddit_posts = Table(
+    "reddit_posts", metadata,
+    Column("id", String, primary_key=True), # We set this column as primary key, since this is the column that will be used to check for conflicts
+    Column("title", String),
+    Column("author", String),
+    Column("score", Integer),
+    Column("num_comments", Integer),
+    Column("created_at", DateTime(timezone=True)),
+    Column("url", String),
+)
+
+
+# Organizes all dataframe rows into a dictionary format, allowing for easier mapping to the table
+records = PandaDataframe.to_dict(orient="records")
+
+try:
+    # Try to insert stmt as a new row. If conflict occurs, we pull data from the excluded row to update the existing one
+    stmt = insert(reddit_posts).values(records)
+    stmt = stmt.on_conflict_do_update(
+        index_elements=[reddit_posts.c.id],
+        set_={
+            "title": stmt.excluded.title,
+            "author": stmt.excluded.author,
+            "score": stmt.excluded.score,
+            "num_comments": stmt.excluded.num_comments,
+            "created_at": stmt.excluded.created_at,
+            "url": stmt.excluded.url,
+        },
     )
 
-    subreddit = reddit.subreddit("economics") # set our subreddit to "economics"
-    posts = [] # List of posts
-    for post in subreddit.hot(limit=50):
-        posts.append({
-            "id": post.id,
-            "title": post.title,
-            "author": str(post.author),
-            "score": post.score,
-            "num_comments": post.num_comments,
-            "created_at": post.created_utc,
-            "url": post.url
-        })
-
-    PandaDataframe = pd.DataFrame(posts) # Using pandas, we convert posts list to tabular data format
-
-    # Next we need to clean up our data a little before export
-    PandaDataframe["author"] = PandaDataframe["author"].apply(lambda a: None if a == "None" else a) # Changes posts with no author to NULL
-    PandaDataframe["created_at"] = pd.to_datetime(PandaDataframe["created_at"], unit='s', utc=True) # Converts reddit timestamp to more usable datetime
-
-    NEON_DB_CONNECTION = os.getenv("NEON_DB_CONNECTION")
-    engine = create_engine(NEON_DB_CONNECTION, pool_pre_ping=True)
-
-    # Creation of table, if it doesnt exist
-    create_sql = """
-    CREATE TABLE IF NOT EXISTS reddit_posts (
-        id TEXT PRIMARY KEY,
-        title TEXT,
-        author TEXT,
-        score INTEGER,
-        num_comments INTEGER,
-        created_at TIMESTAMPTZ,
-        url TEXT
-    );
-    """
-
-    # Applies created table if table doesn't exist, makes no changes if table does already exist
+    # Executes stmt and populates the row
     with engine.begin() as x:
-        x.execute(text(create_sql))
+        x.execute(stmt)
 
-    # Define metadata for PostgreSQL table, since table schema isnt remembered between each SQL execution
-    metadata = MetaData()
-    reddit_posts = Table(
-        "reddit_posts", metadata,
-        Column("id", String, primary_key=True), # We set this column as primary key, since this is the column that will be used to check for conflicts
-        Column("title", String),
-        Column("author", String),
-        Column("score", Integer),
-        Column("num_comments", Integer),
-        Column("created_at", DateTime(timezone=True)),
-        Column("url", String),
-    )
-
-
-    # Organizes all dataframe rows into a dictionary format, allowing for easier mapping to the table
-    records = PandaDataframe.to_dict(orient="records")
-
-    try:
-        # Try to insert stmt as a new row. If conflict occurs, we pull data from the excluded row to update the existing one
-        stmt = insert(reddit_posts).values(records)
-        stmt = stmt.on_conflict_do_update(
-            index_elements=[reddit_posts.c.id],
-            set_={
-                "title": stmt.excluded.title,
-                "author": stmt.excluded.author,
-                "score": stmt.excluded.score,
-                "num_comments": stmt.excluded.num_comments,
-                "created_at": stmt.excluded.created_at,
-                "url": stmt.excluded.url,
-            },
-        )
-
-        # Executes stmt and populates the row
-        with engine.begin() as x:
-            x.execute(stmt)
-
-    except: # Deletion for when database if full. We can do a simple deletion to continue the process.
-        delete = """
-        DELETE FROM reddit_posts 
-        WHERE id IN (
-            SELECT ID
-            FROM reddit_posts
-            ORDER BY created_at ASC
-            LIMIT 50
-        );
-        """
-
-        # Executes deletion
-        with engine.begin() as deleter:
-            deleter.execute(text(delete))
-        print("DB is full, deleted old rows and made space!")
-
-
-    # List of Ids
-    new_ids = [r["id"] for r in records]
-
-    # Check how many of them already exist in DB
-    with engine.begin() as counter:
-        existing_ids = counter.execute(
-            text("SELECT id FROM reddit_posts WHERE id = ANY(:ids)"),
-            {"ids": new_ids}
-        )
-    existing_ids_count = [r for r in existing_ids] # All we need is number of rows we didn't insert becuase of conflict, so we can subtract that from total number of records
-
-    # We update our insert count so that we know exactly how many records we added, and cycle out that same amount
-    new_count = len(new_ids) - len(existing_ids_count)
-
-
-
-
-    # SQL for cycling out number of old posts equal to number inserted
-    cycle = """
+except: # Deletion for when database if full. We can do a simple deletion to continue the process.
+    delete = """
     DELETE FROM reddit_posts 
     WHERE id IN (
         SELECT ID
         FROM reddit_posts
         ORDER BY created_at ASC
-        LIMIT :new_inserted
+        LIMIT 50
     );
     """
 
-    # Executes cycle
+    # Executes deletion
     with engine.begin() as deleter:
-        deleter.execute(text(cycle),{"new_inserted":new_count})
-    print("succesfully cycled old rows!")
-    
+        deleter.execute(text(delete))
+    print("DB is full, deleted old rows and made space!")
 
-    # Final checkover to verify our data
-    with engine.begin() as conn:
-        preview = pd.read_sql(
-            "SELECT id, title, score, num_comments, created_at FROM reddit_posts ORDER BY created_at DESC LIMIT 5",
-            conn
-        )
-    print(preview)
 
-    time.sleep(60)
+# List of Ids
+new_ids = [r["id"] for r in records]
+
+# Check how many of them already exist in DB
+with engine.begin() as counter:
+    existing_ids = counter.execute(
+        text("SELECT id FROM reddit_posts WHERE id = ANY(:ids)"),
+        {"ids": new_ids}
+    )
+existing_ids_count = [r for r in existing_ids] # All we need is number of rows we didn't insert becuase of conflict, so we can subtract that from total number of records
+
+# We update our insert count so that we know exactly how many records we added, and cycle out that same amount
+new_count = len(new_ids) - len(existing_ids_count)
+
+
+
+
+# SQL for cycling out number of old posts equal to number inserted
+cycle = """
+DELETE FROM reddit_posts 
+WHERE id IN (
+    SELECT ID
+    FROM reddit_posts
+    ORDER BY created_at ASC
+    LIMIT :new_inserted
+);
+"""
+
+# Executes cycle
+with engine.begin() as deleter:
+    deleter.execute(text(cycle),{"new_inserted":new_count})
+print("succesfully cycled old rows!")
+
+
+# Final checkover to verify our data
+with engine.begin() as conn:
+    preview = pd.read_sql(
+        "SELECT id, title, score, num_comments, created_at FROM reddit_posts ORDER BY created_at DESC LIMIT 5",
+        conn
+    )
+print(preview)
