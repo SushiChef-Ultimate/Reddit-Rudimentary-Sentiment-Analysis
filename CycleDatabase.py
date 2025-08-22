@@ -10,7 +10,6 @@ from sqlalchemy import MetaData, Table, Column, String, Integer, DateTime
 from sqlalchemy.dialects.postgresql import insert
 
 # We first load .env info into variables
-# We will be hosting this file on google cloud I can run this repeatedly & automatically without using local compute. No need for 60 sec loop.
 load_dotenv()
 
 client_id = os.getenv("CLIENT_ID")
