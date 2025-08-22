@@ -6,3 +6,7 @@ Commit 2:
     The code now generates a table if it doesn't exist (only really runs the first time), and populates the table with data.
     We will be using Neon as our serverless database, since its free tier is accesible for someone in my position, and automatic scaling
     takes some responsibility from me.
+
+Commit 3:
+    Modified python file to continously populate NeonDB. Created a similar python file that deletes old info and replaces it with new info continously
+    This will be useful when we eventually hit Neon's storage limit, but still want to up-to-date data.
