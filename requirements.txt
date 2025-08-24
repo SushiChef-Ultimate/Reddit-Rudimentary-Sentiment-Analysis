@@ -1,0 +1,5 @@
+praw
+python-dotenv
+pandas
+SQLAlchemy
+psycopg2-binary

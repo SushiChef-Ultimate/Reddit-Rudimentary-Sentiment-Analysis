@@ -11,5 +11,11 @@ Commit 3:
     Modified python file to continously populate NeonDB. Created a similar python file that deletes old info and replaces it with new info continously
     This will be useful when we eventually hit Neon's storage limit, but still want to up-to-date data.
 
-    After further consideration, we will be automating use of these files on google cloud, since populating the database locally
+    After further consideration, we will be automating use of these files on cloud, since populating the database locally
     can be somewhat cumbersome.
+
+Commit 4:
+    We will be utlizing AWS to continously deploy our project. Created a requirements.txt file so that AWS can download our
+    libraries.
+
+    Created a buildspec.yml for AWS lambda.
