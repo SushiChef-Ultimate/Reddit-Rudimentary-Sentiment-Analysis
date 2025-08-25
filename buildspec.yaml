@@ -1,8 +1,19 @@
 version: 0.2
+
 phases:
   install:
+    runtime-versions:
+      python: 3.11
     commands:
-      - echo "test"
+      - echo "Installing dependencies..."
+      - pip install --upgrade pip
+      - pip install -r requirements.txt -t .
+  build:
+    commands:
+      - echo "Zipping source code and dependencies..."
+      # Package everything directly into lambda_package.zip
+      - zip -r lambda_package.zip . -x "*/.*"
+
 artifacts:
   files:
-    - '**/*'
+    - lambda_package.zip
