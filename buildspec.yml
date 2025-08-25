@@ -3,17 +3,24 @@ version: 0.2
 phases:
   pre_build:
     commands:
-      - rm -rf *.zip
+      - echo "Cleaning old builds..."
+      - rm -rf lambda_package.zip
       - rm -rf *.pyc __pycache__/
   install:
     runtime-versions:
       python: 3.11
     commands:
-      - pip install --upgrade pip
+      - echo "Upgrading pip and installing dependencies..."
+      - python -m pip install --upgrade pip
+      # Install all dependencies into the current directory
       - pip install -r requirements.txt -t .
   build:
     commands:
-      - zip -r lambda_package.zip *.py *
+      - echo "Creating Lambda deployment package..."
+      # Zip all Python files and installed dependencies
+      - zip -r lambda_package.zip *.py */ -x "*.git*" -x "*.pyc" -x "__pycache__/*"
+      - echo "Contents of the zip file:"
+      - unzip -l lambda_package.zip
 artifacts:
   files:
     - lambda_package.zip
