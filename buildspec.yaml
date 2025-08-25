@@ -1,5 +1,4 @@
 version: 0.2
-
 phases:
   install:
     runtime-versions:
@@ -11,7 +10,6 @@ phases:
   build:
     commands:
       - echo "Build phase complete — dependencies installed."
-
 artifacts:
   files:
     - '**/*'
