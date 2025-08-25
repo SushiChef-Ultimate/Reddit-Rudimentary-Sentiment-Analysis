@@ -1,17 +1,8 @@
----
 version: 0.2
 phases:
   install:
-    runtime-versions:
-      python: 3.11
     commands:
-      - echo "Installing dependencies..."
-      - pip install --upgrade pip
-      - pip install -r requirements.txt -t .
-  build:
-    commands:
-      - echo "Build phase complete — dependencies installed."
+      - echo "test"
 artifacts:
   files:
-    - "**/*"
-  discard-paths: yes
+    - '**/*'
