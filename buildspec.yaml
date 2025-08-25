@@ -1,3 +1,4 @@
+---
 version: 0.2
 phases:
   install:
@@ -12,5 +13,5 @@ phases:
       - echo "Build phase complete — dependencies installed."
 artifacts:
   files:
-    - '**/*'
+    - "**/*"
   discard-paths: yes
