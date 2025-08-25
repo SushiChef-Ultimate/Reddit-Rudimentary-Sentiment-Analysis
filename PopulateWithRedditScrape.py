@@ -120,5 +120,5 @@ def runFile():
     print(preview)
 
 def lambda_handler(event, context):
-    runFile()
+    # runFile()
     print("Lambda file executed!")
