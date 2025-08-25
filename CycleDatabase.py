@@ -2,7 +2,6 @@
 
 import praw
 import os
-import time
 from dotenv import load_dotenv
 import pandas as pd
 from sqlalchemy import create_engine, text
@@ -157,6 +156,5 @@ def runFile():
         )
     print(preview)
 
-def lambda_handler(event, context):
+if __name__ == "__main__":
     runFile()
-    print("Lambda file executed!")
