@@ -1,5 +1,5 @@
-praw
-python-dotenv
-pandas
-SQLAlchemy
-psycopg2-binary
+praw==7.7.1
+python-dotenv==1.0.0
+pandas==2.0.3
+SQLAlchemy==2.0.21
+psycopg2-binary==2.9.9

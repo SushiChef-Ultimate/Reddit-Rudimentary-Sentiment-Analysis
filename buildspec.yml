@@ -1,0 +1,22 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.11
+    commands:
+      - echo "Installing dependencies into temp_libs/"
+      - pip install -r requirements.txt -t temp_libs/
+
+  build:
+    commands:
+      - echo "Zipping dependencies..."
+      - zip -r glue_dependencies.zip temp_libs/
+      - echo "Build complete. Artifacts are ready."
+
+artifacts:
+  files:
+    - glue_dependencies.zip
+    - *.py
+    - .env
+  discard-paths: yes
