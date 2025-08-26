@@ -4,6 +4,14 @@ import praw
 import pandas as pd
 from sqlalchemy import create_engine, text, MetaData, Table, Column, String, Integer, DateTime
 from sqlalchemy.dialects.postgresql import insert
+import logging
+
+# --- Configure logging ---
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 def runFile():
     try:
@@ -11,10 +19,10 @@ def runFile():
             try:
                 client = boto3.client("secretsmanager", region_name=region)
                 secret = json.loads(client.get_secret_value(SecretId=secret_name)["SecretString"])
-                print(f"Secrets fetched for {secret_name}")
+                logger.info(f"Secrets fetched for {secret_name}")
                 return secret
             except Exception as e:
-                print(f"Error fetching secrets {secret_name}: {e}")
+                logger.error(f"Error fetching secrets {secret_name}: {e}")
                 raise
 
         # --- Fetch secrets ---
@@ -38,9 +46,9 @@ def runFile():
         # --- Connect to Reddit ---
         try:
             reddit = praw.Reddit(client_id=CLIENT_ID, client_secret=CLIENT_SECRET, user_agent=USER_AGENT)
-            print("Connected to Reddit")
+            logger.info("Connected to Reddit")
         except Exception as e:
-            print("Error connecting to Reddit:", e)
+            logger.error("Error connecting to Reddit: %s", e)
             raise
 
         # --- Fetch posts ---
@@ -57,23 +65,22 @@ def runFile():
                     "created_at": post.created_utc,
                     "url": post.url
                 })
-            print(f"Fetched {len(posts)} posts from Reddit")
+            logger.info(f"Fetched {len(posts)} posts from Reddit")
         except Exception as e:
-            print("Error fetching posts:", e)
+            logger.error("Error fetching posts: %s", e)
             raise
 
         df = pd.DataFrame(posts)
         df["author"] = df["author"].apply(lambda a: None if a == "None" else a)
         df["created_at"] = pd.to_datetime(df["created_at"], unit='s', utc=True)
-        print("DataFrame created:")
-        print(df.head())
+        logger.info("DataFrame created with head:\n%s", df.head())
 
         # --- Connect to RDS ---
         try:
             engine = create_engine(RDS_DB_CONNECTION, pool_pre_ping=True)
-            print("Connected to RDS")
+            logger.info("Connected to RDS")
         except Exception as e:
-            print("Error connecting to RDS:", e)
+            logger.error("Error connecting to RDS: %s", e)
             raise
 
         # --- Create table ---
@@ -91,9 +98,9 @@ def runFile():
             """
             with engine.begin() as conn:
                 conn.execute(text(create_sql))
-            print("Table ensured")
+            logger.info("Table ensured")
         except Exception as e:
-            print("Error creating table:", e)
+            logger.error("Error creating table: %s", e)
             raise
 
         # --- Prepare upsert ---
@@ -127,9 +134,9 @@ def runFile():
 
             with engine.begin() as conn:
                 conn.execute(stmt)
-            print(f"Inserted/updated {len(records)} records")
+            logger.info("Inserted/updated %d records", len(records))
         except Exception as e:
-            print("Error inserting/updating records:", e)
+            logger.error("Error inserting/updating records: %s", e)
             raise
 
         # --- Preview latest posts ---
@@ -139,14 +146,13 @@ def runFile():
                     "SELECT id, title, score, num_comments, created_at FROM reddit_posts ORDER BY created_at DESC LIMIT 5",
                     conn
                 )
-            print("Latest 5 posts:")
-            print(preview)
+            logger.info("Latest 5 posts:\n%s", preview)
         except Exception as e:
-            print("Error fetching preview:", e)
+            logger.error("Error fetching preview: %s", e)
             raise
 
     except Exception as e:
-        print("An unexpected error occurred:", e)
+        logger.error("An unexpected error occurred: %s", e)
 
 if __name__ == "__main__":
     runFile()
