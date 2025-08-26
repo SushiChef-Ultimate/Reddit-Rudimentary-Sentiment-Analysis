@@ -16,5 +16,4 @@ artifacts:
   files:
     - glue_dependencies.zip
     - "*.py"
-    - .env
   discard-paths: true
