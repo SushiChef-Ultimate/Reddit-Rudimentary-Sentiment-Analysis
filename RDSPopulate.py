@@ -55,7 +55,7 @@ def runFile():
         try:
             subreddit = reddit.subreddit("economics")
             posts = []
-            for post in subreddit.hot(limit=50):
+            for post in subreddit.hot(limit=100):
                 posts.append({
                     "id": post.id,
                     "title": post.title,
