@@ -6,108 +6,147 @@ from sqlalchemy import create_engine, text, MetaData, Table, Column, String, Int
 from sqlalchemy.dialects.postgresql import insert
 
 def runFile():
-    def fetch_secrets(secret_name, region="us-east-2"):
-        client = boto3.client("secretsmanager", region_name=region)
-        return json.loads(client.get_secret_value(SecretId=secret_name)["SecretString"])
+    try:
+        def fetch_secrets(secret_name, region="us-east-2"):
+            try:
+                client = boto3.client("secretsmanager", region_name=region)
+                secret = json.loads(client.get_secret_value(SecretId=secret_name)["SecretString"])
+                print(f"Secrets fetched for {secret_name}")
+                return secret
+            except Exception as e:
+                print(f"Error fetching secrets {secret_name}: {e}")
+                raise
 
-    # --- Fetch secrets from AWS Secrets Manager ---
-    reddit_secrets = fetch_secrets("reddit-scraper-secrets")
-    rds_secrets = fetch_secrets("rds!db-027311fd-e11d-4e69-919d-7eef98ca22a6")
+        # --- Fetch secrets ---
+        reddit_secrets = fetch_secrets("reddit-scraper-secrets")
+        rds_secrets = fetch_secrets("rds!db-027311fd-e11d-4e69-919d-7eef98ca22a6")
 
-    # --- Use secrets directly ---
-    CLIENT_ID = reddit_secrets["CLIENT_ID"]
-    CLIENT_SECRET = reddit_secrets["CLIENT_SECRET"]
-    USER_AGENT = reddit_secrets["USER_AGENT"]
+        # --- Reddit credentials ---
+        CLIENT_ID = reddit_secrets["CLIENT_ID"]
+        CLIENT_SECRET = reddit_secrets["CLIENT_SECRET"]
+        USER_AGENT = reddit_secrets["USER_AGENT"]
 
-    DB_USER = rds_secrets["username"]
-    DB_PASS = rds_secrets["password"]
-    DB_HOST = rds_secrets["host"]
-    DB_PORT = rds_secrets["port"]
-    DB_NAME = rds_secrets["dbname"]
+        # --- RDS credentials ---
+        DB_USER = rds_secrets["username"]
+        DB_PASS = rds_secrets["password"]
+        DB_HOST = rds_secrets["host"]
+        DB_PORT = rds_secrets["port"]
+        DB_NAME = rds_secrets["dbname"]
 
-    RDS_DB_CONNECTION = f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+        RDS_DB_CONNECTION = f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
+        # --- Connect to Reddit ---
+        try:
+            reddit = praw.Reddit(client_id=CLIENT_ID, client_secret=CLIENT_SECRET, user_agent=USER_AGENT)
+            print("Connected to Reddit")
+        except Exception as e:
+            print("Error connecting to Reddit:", e)
+            raise
 
-    # --- Connect to Reddit ---
-    reddit = praw.Reddit(
-        client_id=CLIENT_ID,
-        client_secret=CLIENT_SECRET,
-        user_agent=USER_AGENT
-    )
+        # --- Fetch posts ---
+        try:
+            subreddit = reddit.subreddit("economics")
+            posts = []
+            for post in subreddit.hot(limit=50):
+                posts.append({
+                    "id": post.id,
+                    "title": post.title,
+                    "author": str(post.author),
+                    "score": post.score,
+                    "num_comments": post.num_comments,
+                    "created_at": post.created_utc,
+                    "url": post.url
+                })
+            print(f"Fetched {len(posts)} posts from Reddit")
+        except Exception as e:
+            print("Error fetching posts:", e)
+            raise
 
-    # --- Fetch latest 50 posts ---
-    subreddit = reddit.subreddit("economics")
-    posts = []
-    for post in subreddit.hot(limit=50):
-        posts.append({
-            "id": post.id,
-            "title": post.title,
-            "author": str(post.author),
-            "score": post.score,
-            "num_comments": post.num_comments,
-            "created_at": post.created_utc,
-            "url": post.url
-        })
+        df = pd.DataFrame(posts)
+        df["author"] = df["author"].apply(lambda a: None if a == "None" else a)
+        df["created_at"] = pd.to_datetime(df["created_at"], unit='s', utc=True)
+        print("DataFrame created:")
+        print(df.head())
 
-    df = pd.DataFrame(posts)
-    df["author"] = df["author"].apply(lambda a: None if a == "None" else a)
-    df["created_at"] = pd.to_datetime(df["created_at"], unit='s', utc=True)
+        # --- Connect to RDS ---
+        try:
+            engine = create_engine(RDS_DB_CONNECTION, pool_pre_ping=True)
+            print("Connected to RDS")
+        except Exception as e:
+            print("Error connecting to RDS:", e)
+            raise
 
-    # --- Connect to AWS RDS PostgreSQL ---
-    engine = create_engine(RDS_DB_CONNECTION, pool_pre_ping=True)
+        # --- Create table ---
+        try:
+            create_sql = """
+            CREATE TABLE IF NOT EXISTS reddit_posts (
+                id TEXT PRIMARY KEY,
+                title TEXT,
+                author TEXT,
+                score INTEGER,
+                num_comments INTEGER,
+                created_at TIMESTAMPTZ,
+                url TEXT
+            );
+            """
+            with engine.begin() as conn:
+                conn.execute(text(create_sql))
+            print("Table ensured")
+        except Exception as e:
+            print("Error creating table:", e)
+            raise
 
-    # --- Create table if it doesn't exist ---
-    create_sql = """
-    CREATE TABLE IF NOT EXISTS reddit_posts (
-        id TEXT PRIMARY KEY,
-        title TEXT,
-        author TEXT,
-        score INTEGER,
-        num_comments INTEGER,
-        created_at TIMESTAMPTZ,
-        url TEXT
-    );
-    """
-    with engine.begin() as conn:
-        conn.execute(text(create_sql))
+        # --- Prepare upsert ---
+        try:
+            metadata = MetaData()
+            reddit_posts = Table(
+                "reddit_posts", metadata,
+                Column("id", String, primary_key=True),
+                Column("title", String),
+                Column("author", String),
+                Column("score", Integer),
+                Column("num_comments", Integer),
+                Column("created_at", DateTime(timezone=True)),
+                Column("url", String)
+            )
 
-    # --- Define table metadata for upserts ---
-    metadata = MetaData()
-    reddit_posts = Table(
-        "reddit_posts", metadata,
-        Column("id", String, primary_key=True),
-        Column("title", String),
-        Column("author", String),
-        Column("score", Integer),
-        Column("num_comments", Integer),
-        Column("created_at", DateTime(timezone=True)),
-        Column("url", String)
-    )
+            records = df.to_dict(orient="records")
 
-    records = df.to_dict(orient="records")
+            stmt = insert(reddit_posts).values(records)
+            stmt = stmt.on_conflict_do_update(
+                index_elements=[reddit_posts.c.id],
+                set_={
+                    "title": stmt.excluded.title,
+                    "author": stmt.excluded.author,
+                    "score": stmt.excluded.score,
+                    "num_comments": stmt.excluded.num_comments,
+                    "created_at": stmt.excluded.created_at,
+                    "url": stmt.excluded.url,
+                }
+            )
 
-    stmt = insert(reddit_posts).values(records)
-    stmt = stmt.on_conflict_do_update(
-        index_elements=[reddit_posts.c.id],
-        set_={
-            "title": stmt.excluded.title,
-            "author": stmt.excluded.author,
-            "score": stmt.excluded.score,
-            "num_comments": stmt.excluded.num_comments,
-            "created_at": stmt.excluded.created_at,
-            "url": stmt.excluded.url,
-        }
-    )
-    with engine.begin() as conn:
-        conn.execute(stmt)
+            with engine.begin() as conn:
+                conn.execute(stmt)
+            print(f"Inserted/updated {len(records)} records")
+        except Exception as e:
+            print("Error inserting/updating records:", e)
+            raise
 
-    # --- Preview latest 5 posts ---
-    with engine.begin() as conn:
-        preview = pd.read_sql(
-            "SELECT id, title, score, num_comments, created_at FROM reddit_posts ORDER BY created_at DESC LIMIT 5",
-            conn
-        )
-    print(preview)
+        # --- Preview latest posts ---
+        try:
+            with engine.begin() as conn:
+                preview = pd.read_sql(
+                    "SELECT id, title, score, num_comments, created_at FROM reddit_posts ORDER BY created_at DESC LIMIT 5",
+                    conn
+                )
+            print("Latest 5 posts:")
+            print(preview)
+        except Exception as e:
+            print("Error fetching preview:", e)
+            raise
+
+    except Exception as e:
+        print("An unexpected error occurred:", e)
 
 if __name__ == "__main__":
     runFile()
