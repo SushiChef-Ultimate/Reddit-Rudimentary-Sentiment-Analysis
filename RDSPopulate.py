@@ -6,16 +6,27 @@ from sqlalchemy import create_engine, text, MetaData, Table, Column, String, Int
 from sqlalchemy.dialects.postgresql import insert
 
 def runFile():
-    # --- Fetch secrets from AWS Secrets Manager ---
-    secret_name = "reddit-rds-secret"  # Replace with your secret name
-    client = boto3.client("secretsmanager")
-    secret_value = client.get_secret_value(SecretId=secret_name)
-    secrets = json.loads(secret_value["SecretString"])
+    def fetch_secrets(secret_name, region="us-east-2"):
+        client = boto3.client("secretsmanager", region_name=region)
+        return json.loads(client.get_secret_value(SecretId=secret_name)["SecretString"])
 
-    CLIENT_ID = secrets["CLIENT_ID"]
-    CLIENT_SECRET = secrets["CLIENT_SECRET"]
-    USER_AGENT = secrets["USER_AGENT"]
-    RDS_DB_CONNECTION = secrets["RDS_DB_CONNECTION"]
+    # --- Fetch secrets from AWS Secrets Manager ---
+    reddit_secrets = fetch_secrets("reddit-scraper-secrets")
+    rds_secrets = fetch_secrets("rds!db-027311fd-e11d-4e69-919d-7eef98ca22a6")
+
+    # --- Use secrets directly ---
+    CLIENT_ID = reddit_secrets["CLIENT_ID"]
+    CLIENT_SECRET = reddit_secrets["CLIENT_SECRET"]
+    USER_AGENT = reddit_secrets["USER_AGENT"]
+
+    DB_USER = rds_secrets["username"]
+    DB_PASS = rds_secrets["password"]
+    DB_HOST = rds_secrets["host"]
+    DB_PORT = rds_secrets["port"]
+    DB_NAME = rds_secrets["dbname"]
+
+    RDS_DB_CONNECTION = f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+
 
     # --- Connect to Reddit ---
     reddit = praw.Reddit(
@@ -75,60 +86,20 @@ def runFile():
 
     records = df.to_dict(orient="records")
 
-    try:
-        stmt = insert(reddit_posts).values(records)
-        stmt = stmt.on_conflict_do_update(
-            index_elements=[reddit_posts.c.id],
-            set_={
-                "title": stmt.excluded.title,
-                "author": stmt.excluded.author,
-                "score": stmt.excluded.score,
-                "num_comments": stmt.excluded.num_comments,
-                "created_at": stmt.excluded.created_at,
-                "url": stmt.excluded.url,
-            }
-        )
-        with engine.begin() as conn:
-            conn.execute(stmt)
-
-    except Exception as e:
-        print(f"Conflict insert failed, cycling old rows. Error: {e}")
-        delete_sql = """
-        DELETE FROM reddit_posts 
-        WHERE id IN (
-            SELECT id
-            FROM reddit_posts
-            ORDER BY created_at ASC
-            LIMIT 50
-        );
-        """
-        with engine.begin() as conn:
-            conn.execute(text(delete_sql))
-
-    # --- Cycle old rows equal to new inserts ---
-    new_ids = [r["id"] for r in records]
+    stmt = insert(reddit_posts).values(records)
+    stmt = stmt.on_conflict_do_update(
+        index_elements=[reddit_posts.c.id],
+        set_={
+            "title": stmt.excluded.title,
+            "author": stmt.excluded.author,
+            "score": stmt.excluded.score,
+            "num_comments": stmt.excluded.num_comments,
+            "created_at": stmt.excluded.created_at,
+            "url": stmt.excluded.url,
+        }
+    )
     with engine.begin() as conn:
-        existing_ids = conn.execute(
-            text("SELECT id FROM reddit_posts WHERE id = ANY(:ids)"),
-            {"ids": new_ids}
-        )
-        existing_ids_count = [r[0] for r in existing_ids]
-
-    new_count = len(new_ids) - len(existing_ids_count)
-
-    if new_count > 0:
-        cycle_sql = """
-        DELETE FROM reddit_posts 
-        WHERE id IN (
-            SELECT id
-            FROM reddit_posts
-            ORDER BY created_at ASC
-            LIMIT :new_inserted
-        );
-        """
-        with engine.begin() as conn:
-            conn.execute(text(cycle_sql), {"new_inserted": new_count})
-        print(f"Successfully cycled {new_count} old rows!")
+        conn.execute(stmt)
 
     # --- Preview latest 5 posts ---
     with engine.begin() as conn:
