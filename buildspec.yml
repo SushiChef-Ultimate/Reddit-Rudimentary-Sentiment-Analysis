@@ -1,16 +1,15 @@
----
 version: 0.2
 phases:
   install:
     runtime-versions:
       python: 3.9
     commands:
-      - echo "Installing dependencies into temp_libs/"
-      - pip install -r requirements.txt -t temp_libs/
+      - echo "Installing dependencies into current directory..."
+      - pip install -r requirements.txt -t .
   build:
     commands:
-      - echo "Zipping dependencies..."
-      - zip -r glue_dependencies.zip temp_libs/
+      - echo "Zipping dependencies and scripts..."
+      - zip -r glue_dependencies.zip * -x "*.git*"  # exclude anything unnecessary
       - echo "Build complete. Artifacts are ready."
 artifacts:
   files:
