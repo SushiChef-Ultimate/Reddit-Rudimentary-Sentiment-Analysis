@@ -15,7 +15,16 @@ Commit 3:
     can be somewhat cumbersome.
 
 Commit 4:
-    We will be utlizing AWS to continously deploy our project. Created a requirements.txt file so that AWS can download our
-    libraries.
+    We will be utlizing Azure to continously deploy our python file, as well as have it run once a day to populate a databse.
+    Created PostgreSQL and Azure Functions resource in Azure.
 
-    Created a buildspec.yml for AWS lambda.
+Commit 5:
+    Intiated the switch from NeonDB to Azure PostgreSQL. Configured the file to pull secrets from the AzureDB to assemble a connection string
+
+Commit 6:
+    Tested file locally to ensure the file would append 100 records to the table. Once this was ensured, host.josn, __init__.py, and function.json 
+    were created. 
+
+    AzureDBPopulatehas been set as the main file to run.
+
+    Github has been committed, and Azure Functions has been set to "run"
