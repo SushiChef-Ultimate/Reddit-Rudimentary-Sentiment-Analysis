@@ -1,3 +1,5 @@
 .env
 PopulateWithRedditScrape.py
 CycleDatabase.py
+RDSPopulate.py
+testlocal.py
