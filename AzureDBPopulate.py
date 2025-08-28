@@ -1,5 +1,5 @@
 import logging
-import pandas as pd
+#import pandas as pd
 import praw
 from sqlalchemy import create_engine, text, MetaData, Table, Column, String, Integer, DateTime
 from sqlalchemy.dialects.postgresql import insert
