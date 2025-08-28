@@ -1,0 +1,47 @@
+*Note that current data insights revolve around a very early stage of the database. Insights are subject to change over time.
+
+Topic Variety:
+    Posts in the r/Economics subreddit cover a wide breadth of topics, as seen with the high concentration of posts not being filed under any of the 9
+    most popular categories. However, there is a high concentration of posts related to "tech/AI" and "interest rates". However, the single most
+    represented category (second only to "other") is "Trump/MAGA".
+
+    This suggests that at the current moment, global economic discussions on social media have a particular interest in American government and  
+    economic policy.  
+
+    This also indicates that many people consider America's current economic policies to be critical to modern world economics.  
+
+
+Surface-Level Engagement (Upvotes):
+    *Context: Upvotes on Reddit are essentially a "like" system for posts. An upvote indicates that a user thinks the post should be seen by others.
+
+    Trending posts that have a topic of "Trump/MAGA" or "interest rates" scored the most upvotes, beating out "other". "Tech/AI" also attracted  
+    significant engagement, with posts with the topic of "job" and "recession" also notably attracting moderate engagement.  
+
+    These results tell us that while posts unrelated to the other 9 topic groups are upvoted often, on average, Reddit users consider posts discussing   
+    Trump's economic policies, interest rates, and tech to be more worthy of being shared.  
+
+    The moderate amount of engagement around the job market and recessions indicates that people online are concerned about job/career prospects, and  
+    that there may be some pessimism about the near future. 
+
+
+Deep Engagement (Comments):
+    *Context: Users can leave "comments" under a post, in order to comment on the contents of the post or to discuss the topic with other commenters.
+
+    Comments left under posts defined as "other" far exceed the number left under posts discussing the usual most popular topics, such as tech,  
+    interest rates, Trump, etc.  
+
+    Behind "other", Trump/MAGA takes 2nd place. While not nearly as much as the first two categories, interest rates and tech-related posts also garner 
+    significant discussion, with the "job" and "recession" topics having much lower but still notable levels of engagement.  
+
+    This informs us that the above 5 categories tend to attract deep discussion and debates between social media users, and it seems that even posts with  
+    more "generic" topics often encourage person-to-person engagement.  
+
+
+Interesting Notes:
+    When counting upvotes, topics like Trump, tech, and interest rates seemed to rival and even cross more general topics defined as "other" in terms of
+    engagement.
+
+    However, this changed with "other" taking the vast lead when it came to deep-engagement in the form of comment count.  
+
+    This suggests that while posts relating to American economic policies, interest rates, and advancements in tech promote high levels of engagement,  
+    they tend to cause "knee-jerk" immediate reactions (in the form of upvotes) a little more often than they attract deeper discussions.  
