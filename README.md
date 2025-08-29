@@ -20,10 +20,12 @@ I'm working within the bounds of an Azure student account, so I was faced with p
 
 I also configured my function to only operate once a day. The Reddit API only allows up to 100 rows to be retrieved per call. This means my pipeline is populating the database with only 100 records per day. Far below the volumes of professional projects, but this small runtime helps to drive down costs and stay within credit limits, while also yielding some very interesting insights into the nature of current economic discussions on social media (see data-insights.txt for more).
 
+One issue I ran into was constant ImportModuleErrors, but after looking through some documentation I discovered a solution. Since the Pandas and NumPy libraries can be somewhat heavy, it's usually best to utilize remote deploy to Azure so that Azure can handle downloading dependencies on deply instead of pre-packaged. This usually works best on a Linux instance, especially premium, since Linux leverages Oryx to download these hefty libraries a little more smoothly.
+
 As for my modeling using Power BI, I opted at first to use DirectQuery in order to have Power BI stay linked with the state of my database at all times by writing queries to the DB instead of importing that data; however, I soon switched to imports.
 
 The reason for this is that Power BI DirectQuery doesn't support all the queries and custom columns I wanted to create, so imports ended up being the better pick.
 
-As of writing, my Power BI report is being hosted on Power BI Service, but since the school trial capacity of Power BI doesn't enable web sharing, I unfortunately had to opt for downloading a PDF of my report (titled Reddit-Scrape-ImportModel.pdf).
+As of writing, my Power BI report is being hosted on Power BI Service, but since the school trial capacity of Power BI doesn't enable web sharing, I unfortunately had to opt for downloading a PDF of my report (titled Reddit-Scrape-ImportModel.pdf). This intial version will account for 100 distinct records, but ill also continously update my GitHub with a more recent version (titled Reddit-Scrape-LatestImport.pdf)
 
 Thanks for your attention!

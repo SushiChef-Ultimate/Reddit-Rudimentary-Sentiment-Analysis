@@ -25,6 +25,14 @@ Commit 6:
     Tested file locally to ensure the file would append 100 records to the table. Once this was ensured, host.josn, __init__.py, and function.json 
     were created. 
 
-    AzureDBPopulatehas been set as the main file to run.
+    AzureDBPopulate has been set as the main file to run.
 
     Github has been committed, and Azure Functions has been set to "run"
+
+Commit 7:
+    After recieving repeated ImportModuleErrors, the decision was made to set the CI/CD to remote deploy.
+
+    The Linux Premium Server has been known to be able to handle the imports of complicated libraries like Pandas and Numpy very well, especially if
+    utilizing remote deploy with Oryx.
+
+    After the changes, the function began to run properly.
