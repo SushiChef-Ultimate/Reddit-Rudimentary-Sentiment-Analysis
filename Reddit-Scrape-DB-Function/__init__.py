@@ -8,11 +8,7 @@ from AzureDBPopulate import main as populator  # We call the main function from 
 def main(mytimer: func.TimerRequest) -> None:
     logging.info("Python function started.")
 
-    try:
-        populator()
-        logging.info("Script executed successfully.")
-    except Exception as e:
-        logging.error(f"Error running python script: {e}")
+    populator()
 
     if mytimer.past_due:
         logging.warning("Lookd like the function timed out :(")
