@@ -20,8 +20,7 @@ def get_secret(secret_name: str) -> str: # return hints like these help with fin
     secret = client.get_secret(secret_name)
     return secret.value
 
-def main(mytimer: func.TimerRequest) -> None: # Time-controlled azure function controlled by function.json
-    try:
+def main() -> None:
         logger.info("Azure Function started at %s", datetime.now(timezone.utc))
 
         CLIENT_ID = get_secret("CLIENT-ID")
@@ -113,6 +112,3 @@ def main(mytimer: func.TimerRequest) -> None: # Time-controlled azure function c
         logger.info("Inserted/updated %d records", len(records))
 
         logger.info("Azure Function finished successfully")
-
-    except Exception as e:
-        logger.error("Error in Azure Function: %s", e)
