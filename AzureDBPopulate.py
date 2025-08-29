@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 KEYVAULT_URL = "https://Reddit-Keys.vault.azure.net/" # Key vault to grab our secrets so we can connect to our reddit scraper and database
 
 def get_secret(secret_name: str) -> str: # return hints like these help with finding out about errors
-    credential = DefaultAzureCredential() # Imported function that helps with the transfer of secrets while keeping things secure
+    credential = DefaultAzureCredential(managed_identity_client_id="ce8da465-8a4a-4690-a40b-3d9b61c90690") # Imported function that helps with the transfer of secrets while keeping things secure
     client = SecretClient(vault_url=KEYVAULT_URL, credential=credential)
     secret = client.get_secret(secret_name)
     return secret.value
