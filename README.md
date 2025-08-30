@@ -1,5 +1,5 @@
 Project Outcomes:
-    Implemented an automated daily ETL pipeline that ingests 100 Reddit posts per day into a PostgreSQL database, with a Power BI report built on top to visualize the processed data.
+    Implemented an automated daily ETL pipeline that ingests 100 Reddit posts per day from the subreddit r/economics (via Reddit's public API) into a PostgreSQL database, with a Power BI report built on top to visualize the processed data.
 
 
 Hello viewers!
