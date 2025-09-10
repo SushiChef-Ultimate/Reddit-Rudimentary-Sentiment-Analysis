@@ -4,8 +4,6 @@ Project Outcomes:
 
 Hello viewers!
 
-My name is Sushanth Yarlagadda. At the time of writing, I'm a junior at the University of North Carolina at Charlotte.
-
 This README will serve mostly as documentation of my learning and thought process as I was creating this personal project (and somewhat as a display of technical knowledge).
 
 This project was at first meant to be a very simple exercise in scraping publicly available data (I settled on scraping Reddit because they provide a free API) and dumping the data in a database after transforming it. However, as the project progressed, I began to see more and more potential in the project and decided that I wanted to leverage what I learned about cloud to make this project a cloud-handled and automated ETL pipeline.
