@@ -1,3 +1,5 @@
+# Buildspec for my AWS enviroment. Not used at all anymore.
+
 version: 0.2
 phases:
   install:
