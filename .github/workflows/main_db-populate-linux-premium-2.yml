@@ -17,7 +17,7 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
+      id-token: write    # needed for OIDC
       contents: read
 
     steps:
@@ -29,13 +29,13 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Azure Login via OIDC
+      - name: Azure Login via Managed Identity
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_FUNCTIONAPP_UAMI_CLIENTID }}  # UAMI client ID
+          auth-type: IDENTITY
+          identity-id: ${{ secrets.AZURE_FUNCTIONAPP_UAMI_CLIENTID }}  # your UAMI client ID
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          auth-type: oidc
 
       - name: Deploy to Azure Functions (Remote Build)
         uses: Azure/functions-action@v1
