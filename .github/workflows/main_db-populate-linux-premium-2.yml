@@ -1,7 +1,7 @@
 # Docs: https://github.com/azure/functions-action
 # Python & GitHub Actions: https://aka.ms/python-webapps-actions
 
-name: Build and deploy Python project to Azure Function App - DB-Populate-Linux-Premium-2
+name: Build and deploy Python project to Azure Function App - DB-Populate-Linux-Premium
 
 on:
   push:
@@ -17,7 +17,7 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write    # needed for OIDC
+      id-token: write
       contents: read
 
     steps:
@@ -29,17 +29,17 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Azure Login via Managed Identity
+      - name: Login to Azure (explicit service principal)
         uses: azure/login@v2
         with:
-          auth-type: IDENTITY
-          identity-id: ${{ secrets.AZURE_FUNCTIONAPP_UAMI_CLIENTID }}  # your UAMI client ID
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_407B0D55CB794E41A52794F519CC66EA }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_C8FC9BC7944848278F8FF864804BFBDA }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_2036DDB89C5E44ED8738D07462EC28C9 }}
 
       - name: Deploy to Azure Functions (Remote Build)
         uses: Azure/functions-action@v1
         with:
-          app-name: 'DB-Populate-Linux-Premium-2'
+          app-name: 'DB-Populate-Linux-Premium'
           slot-name: 'Production'
-          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}  # point to source folder for remote build
+          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}  # optional if you prefer publish profile
